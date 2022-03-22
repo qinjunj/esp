@@ -18,7 +18,30 @@ static unsigned DMA_WORD_PER_BEAT(unsigned _st)
         return (sizeof(void *) / _st);
 }
 
+static inline uint64_t get_counter()
+{
+	uint64_t counter;
+	asm volatile (
+		"li t0, 0;"
+		// "rdcycle t0;"
+		"csrr t0, mcycle;"
+		"mv %0, t0"
+		: "=r" ( counter )
+		:
+		: "t0"
+	);
 
+	// printf("counter: %x\n", counter);
+
+	return counter;
+}
+
+static float my_abs(float a){
+	if(a > 0)
+		return a;
+	else
+		return -a;
+}
 #define SLD_ROTATEORDER2 0x054
 #define DEV_NAME "sld,rotateorder2_vivado"
 
@@ -35,6 +58,9 @@ static unsigned in_size;
 static unsigned out_size;
 static unsigned out_offset;
 static unsigned mem_size;
+
+uint64_t start_cnt_pc;
+uint64_t end_cnt_pc;
 
 /* Size of the contiguous chunks for scatter/gather */
 #define CHUNK_SHIFT 20
@@ -54,13 +80,14 @@ static int validate_buf(token_t *out, token_t *gold)
 {
 	int i;
 	int j;
-	unsigned errors = 0;
+	int errors = 0;
 
 	for (i = 0; i < nBatches; i++)
 		for (j = 0; j < channels * nSamples; j++)
-			if (gold[i * out_words_adj + j] != out[i * out_words_adj + j])
+			if (my_abs(gold[i * out_words_adj + j] - out[i * out_words_adj + j]) > 0.00001)
 				errors++;
 
+    printf("errors in baremetal: %d\n", errors); 
 	return errors;
 }
 
@@ -97,6 +124,7 @@ static void init_buf (token_t *in, token_t * gold)
     float m_pfTempSample[5] = {0};
     const float fSqrt3 = sqrt(3.f);
 
+    start_cnt_pc = get_counter(); 
     for (int niSample = 0; niSample < nSamples; niSample++) {
         // Alpha rotation 
         m_pfTempSample[kV] = - in[kU*nSamples+niSample] * m_fSin2Alpha
@@ -107,7 +135,7 @@ static void init_buf (token_t *in, token_t * gold)
         m_pfTempSample[kS] = in[kS*nSamples+niSample] * m_fCosAlpha
                              + in[kT*nSamples+niSample] * m_fSinAlpha;
         m_pfTempSample[kU] = in[kU*nSamples+niSample] * m_fCos2Alpha
-                             + in[kV*nSamples+niSample] * m_fSin2Alpha;
+                             + in[kV*nSamples+niSample] * m_fSin2Alpha; 
         // Beta rotation
         gold[kV*nSamples+niSample] = -m_fSinBeta * m_pfTempSample[kT]
                                 + m_fCosBeta * m_pfTempSample[kV];
@@ -121,7 +149,7 @@ static void init_buf (token_t *in, token_t * gold)
                                 + m_fCosBeta * m_fSinBeta * m_pfTempSample[kU];
         gold[kU*nSamples+niSample] = (0.25f * m_fCos2Beta + 0.75f) * m_pfTempSample[kU]
                                 - m_fCosBeta * m_fSinBeta * m_pfTempSample[kS]
-                                +0.5 * fSqrt3 * pow(m_fSinBeta,2.0) * m_pfTempSample[kR];
+                                +0.5 * fSqrt3 * pow(m_fSinBeta,2.0) * m_pfTempSample[kR]; 
 
         // Gamma rotation
         m_pfTempSample[kV] = - gold[kU*nSamples+niSample] * m_fSin2Gamma
@@ -133,15 +161,16 @@ static void init_buf (token_t *in, token_t * gold)
         m_pfTempSample[kS] = gold[kS*nSamples+niSample] * m_fCosGamma
                              + gold[kT*nSamples+niSample] * m_fSinGamma;
         m_pfTempSample[kU] = gold[kU*nSamples+niSample] * m_fCos2Gamma
-                             + gold[kV*nSamples+niSample] * m_fSin2Gamma;
+                             + gold[kV*nSamples+niSample] * m_fSin2Gamma; 
 
         gold[kR*nSamples+niSample] = m_pfTempSample[kR];
         gold[kS*nSamples+niSample] = m_pfTempSample[kS];
         gold[kT*nSamples+niSample] = m_pfTempSample[kT];
         gold[kU*nSamples+niSample] = m_pfTempSample[kU];
-        gold[kV*nSamples+niSample] = m_pfTempSample[kV];
+        gold[kV*nSamples+niSample] = m_pfTempSample[kV]; 
 
     }
+    end_cnt_pc = get_counter(); 
     /*
     FILE *inputFile = fopen("/scratch/projects/qinjunj2/esp/accelerators/vivado_hls/rotateorder2_vivado/hw/tb/inputs_2.txt", "r");
     FILE *outputFile = fopen("/scratch/projects/qinjunj2/esp/accelerators/vivado_hls/rotateorder2_vivado/hw/tb/outputs_2.txt", "r");
@@ -185,6 +214,8 @@ int main(int argc, char * argv[])
 	token_t *gold;
 	unsigned errors = 0;
 	unsigned coherence;
+    uint64_t start_cnt;
+	uint64_t end_cnt;
 
 	if (DMA_WORD_PER_BEAT(sizeof(token_t)) == 0) {
 		in_words_adj = channels * nSamples;
@@ -247,6 +278,7 @@ int main(int argc, char * argv[])
 			/* TODO: Restore full test once ESP caches are integrated */
 			coherence = ACC_COH_NONE;
 #endif
+            // enum accelerator_coherence {ACC_COH_NONE = 0, ACC_COH_LLC, ACC_COH_RECALL, ACC_COH_FULL, ACC_COH_AUTO};
 			printf("  --------------------\n");
 			printf("  Generate input...\n");
 			init_buf(mem, gold);
@@ -273,12 +305,14 @@ int main(int argc, char * argv[])
 		iowrite32(dev, ROTATEORDER2_NBATCHES_REG, nBatches);
 		iowrite32(dev, ROTATEORDER2_CHANNELS_REG, channels);
 		iowrite32(dev, ROTATEORDER2_NSAMPLES_REG, nSamples);
-
+            
+            printf("  Start...\n");
+            start_cnt = get_counter(); 
 			// Flush (customize coherence model here)
 			esp_flush(coherence);
 
 			// Start accelerators
-			printf("  Start...\n");
+			// printf("  Start...\n");
 			iowrite32(dev, CMD_REG, CMD_MASK_START);
 
 			// Wait for completion
@@ -286,8 +320,10 @@ int main(int argc, char * argv[])
 			while (!done) {
 				done = ioread32(dev, STATUS_REG);
 				done &= STATUS_MASK_DONE;
+                printf("not done...\n");  
 			}
 			iowrite32(dev, CMD_REG, 0x0);
+            end_cnt = get_counter(); 
 
 			printf("  Done\n");
 			printf("  validating...\n");
@@ -299,6 +335,10 @@ int main(int argc, char * argv[])
 			else
 				printf("  ... PASS\n");
 		}
+        
+        printf("acc counter: %lu\n", end_cnt-start_cnt);
+		printf("cpu  counter: %lu\n", end_cnt_pc-start_cnt_pc);
+        
 		aligned_free(ptable);
 		aligned_free(mem);
 		aligned_free(gold);
