@@ -7,15 +7,20 @@ esp/accelerators/vivado_hls/rotateorder2_vivado/sw/baremetal/rotateorder#.c
 Go to esp/socs/xilinx-vc707-xc7vx485t
 Generate HLS code: 
 - make rotateorder#_vivado-hls 
+
 Configure FPGA:
 - make grlib-xconfig
 - make esp-xconfig
-Generate bit stream;
+
+Generate bit stream: 
 - make socketgen-distclean socketgen vivado-clean vivado-syn
+
 Make baremetal application:
 - make rotateorder#_vivado-baremetal
+
 Program the FPGA:
 - make fpga-program
+
 Running code on the FPGA:
 TEST_PROGRAM=./soft-build/ariane/baremetal/rotateorder#_vivado.exe make fpga-run 
 
