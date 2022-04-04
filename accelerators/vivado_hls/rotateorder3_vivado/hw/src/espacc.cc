@@ -69,12 +69,12 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
              word_t _outbuff[SIZE_OUT_CHUNK_DATA])
 {
     
-    const unsigned length = round_up(nSamples, VALUES_PER_WORD) / 1;
+    //const unsigned length = round_up(nSamples, VALUES_PER_WORD) / 1;
     const unsigned kQ = 0, kO = 1, kM = 2, kK = 3, kL = 4, kN = 5, kP = 6;
     
-    word_t m_pfTempSample_kQ, m_pfTempSample_kO, m_pfTempSample_kM, m_pfTempSample_kK, m_pfTempSample_kL, m_pfTempSample_kN, m_pfTempSample_kP;
-    word_t pBFSrcDst_m_ppfChannels_kQ, pBFSrcDst_m_ppfChannels_kO, pBFSrcDst_m_ppfChannels_kM, pBFSrcDst_m_ppfChannels_kK, 
-           pBFSrcDst_m_ppfChannels_kL, pBFSrcDst_m_ppfChannels_kN, pBFSrcDst_m_ppfChannels_kP;
+    // word_t m_pfTempSample_kQ, m_pfTempSample_kO, m_pfTempSample_kM, m_pfTempSample_kK, m_pfTempSample_kL, m_pfTempSample_kN, m_pfTempSample_kP;
+    // word_t pBFSrcDst_m_ppfChannels_kQ, pBFSrcDst_m_ppfChannels_kO, pBFSrcDst_m_ppfChannels_kM, pBFSrcDst_m_ppfChannels_kK, 
+    //        pBFSrcDst_m_ppfChannels_kL, pBFSrcDst_m_ppfChannels_kN, pBFSrcDst_m_ppfChannels_kP;
     
     float fSqrt3_2 = sqrt(3.f/2.f);
     float fSqrt15 = sqrt(15.f);
@@ -104,65 +104,132 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
     // row major access
     #define IND(row,col) ((row)*nSamples+(col))
 
+    float m_pfTempSample[nChannels] = {0};
+
     for(unsigned niSample = 0; niSample < nSamples; niSample++)
     {
         // Alpha rotation
-        m_pfTempSample_kQ = - _inbuff[IND(kP,niSample)] * m_fSin3Alpha
-                            + _inbuff[IND(kQ,niSample)] * m_fCos3Alpha;
-        
-        m_pfTempSample_kO = - _inbuff[IND(kN,niSample)] * m_fSin2Alpha
-                            + _inbuff[IND(kO,niSample)] * m_fCos2Alpha;
-        m_pfTempSample_kM = - _inbuff[IND(kL,niSample)] * m_fSinAlpha
-                            + _inbuff[IND(kM,niSample)] * m_fCosAlpha;
-        m_pfTempSample_kK = _inbuff[IND(kK,niSample)];
-        m_pfTempSample_kL = _inbuff[IND(kL,niSample)] * m_fCosAlpha
-                            + _inbuff[IND(kM,niSample)] * m_fSinAlpha;
-        m_pfTempSample_kN = _inbuff[IND(kN,niSample)] * m_fCos2Alpha
-                            + _inbuff[IND(kO,niSample)] * m_fSin2Alpha;
-        m_pfTempSample_kP = _inbuff[IND(kP,niSample)] * m_fCos3Alpha
-                            + _inbuff[IND(kQ,niSample)] * m_fSin3Alpha;
-        
-        // Beta rotation
-        pBFSrcDst_m_ppfChannels_kQ= 0.125f * m_pfTempSample_kQ * (5.f + 3.f*m_fCos2Beta)
-                    - fSqrt3_2 * m_pfTempSample_kO *m_fCosBeta * m_fSinBeta
-                    + 0.25f * fSqrt15 * m_pfTempSample_kM * pow(m_fSinBeta,2.0f);
-        pBFSrcDst_m_ppfChannels_kO = m_pfTempSample_kO * m_fCos2Beta
-                    - fSqrt5_2 * m_pfTempSample_kM * m_fCosBeta * m_fSinBeta
-                    + fSqrt3_2 * m_pfTempSample_kQ * m_fCosBeta * m_fSinBeta;
-        pBFSrcDst_m_ppfChannels_kM = 0.125f * m_pfTempSample_kM * (3.f + 5.f*m_fCos2Beta)
-                    - fSqrt5_2 * m_pfTempSample_kO *m_fCosBeta * m_fSinBeta
-                    + 0.25f * fSqrt15 * m_pfTempSample_kQ * pow(m_fSinBeta,2.0f);
-        pBFSrcDst_m_ppfChannels_kK = 0.25f * m_pfTempSample_kK * m_fCosBeta * (-1.f + 15.f*m_fCos2Beta)
-                    + 0.5f * fSqrt15 * m_pfTempSample_kN * m_fCosBeta * pow(m_fSinBeta,2.f)
-                    + 0.5f * fSqrt5_2 * m_pfTempSample_kP * pow(m_fSinBeta,3.f)
-                    + 0.125f * fSqrt3_2 * m_pfTempSample_kL * (m_fSinBeta + 5.f * m_fSin3Beta);
-        pBFSrcDst_m_ppfChannels_kL = 0.0625f * m_pfTempSample_kL * (m_fCosBeta + 15.f * m_fCos3Beta)
-                    + 0.25f * fSqrt5_2 * m_pfTempSample_kN * (1.f + 3.f * m_fCos2Beta) * m_fSinBeta
-                    + 0.25f * fSqrt15 * m_pfTempSample_kP * m_fCosBeta * pow(m_fSinBeta,2.f)
-                    - 0.125 * fSqrt3_2 * m_pfTempSample_kK * (m_fSinBeta + 5.f * m_fSin3Beta);
-        pBFSrcDst_m_ppfChannels_kN = 0.125f * m_pfTempSample_kN * (5.f * m_fCosBeta + 3.f * m_fCos3Beta)
-                    + 0.25f * fSqrt3_2 * m_pfTempSample_kP * (3.f + m_fCos2Beta) * m_fSinBeta
-                    + 0.5f * fSqrt15 * m_pfTempSample_kK * m_fCosBeta * pow(m_fSinBeta,2.f)
-                    + 0.125 * fSqrt5_2 * m_pfTempSample_kL * (m_fSinBeta - 3.f * m_fSin3Beta);
-        pBFSrcDst_m_ppfChannels_kP = 0.0625f * m_pfTempSample_kP * (15.f * m_fCosBeta + m_fCos3Beta)
-                    - 0.25f * fSqrt3_2 * m_pfTempSample_kN * (3.f + m_fCos2Beta) * m_fSinBeta
-                    + 0.25f * fSqrt15 * m_pfTempSample_kL * m_fCosBeta * pow(m_fSinBeta,2.f)
-                    - 0.5 * fSqrt5_2 * m_pfTempSample_kK * pow(m_fSinBeta,3.f);
-        
+        m_pfTempSample[kQ] = - _inbuff[kP*nSamples+niSample] * m_fSin3Alpha
+                            + _inbuff[kQ*nSamples+niSample] * m_fCos3Alpha;
+        m_pfTempSample[kO] = - _inbuff[kN*nSamples+niSample] * m_fSin2Alpha
+                            + _inbuff[kO*nSamples+niSample] * m_fCos2Alpha;
+        m_pfTempSample[kM] = - _inbuff[kL*nSamples+niSample] * m_fSinAlpha
+                            + _inbuff[kM*nSamples+niSample] * m_fCosAlpha;
+        m_pfTempSample[kK] = _inbuff[kK*nSamples+niSample];
+        m_pfTempSample[kL] = _inbuff[kL*nSamples+niSample] * m_fCosAlpha
+                            + _inbuff[kM*nSamples+niSample] * m_fSinAlpha;
+        m_pfTempSample[kN] = _inbuff[kN*nSamples+niSample] * m_fCos2Alpha
+                           + _inbuff[kO*nSamples+niSample] * m_fSin2Alpha;
+        m_pfTempSample[kP] = _inbuff[kP*nSamples+niSample] * m_fCos3Alpha
+                            + _inbuff[kQ*nSamples+niSample] * m_fSin3Alpha;
+
+        // // Beta rotation
+        _outbuff[kQ*nSamples+niSample] = 0.125f * m_pfTempSample[kQ] * (5.f + 3.f*m_fCos2Beta)
+                    - fSqrt3_2 * m_pfTempSample[kO] *m_fCosBeta * m_fSinBeta
+                    + 0.25f * fSqrt15 * m_pfTempSample[kM] * pow(m_fSinBeta,2.0f);
+        _outbuff[kO*nSamples+niSample] = m_pfTempSample[kO] * m_fCos2Beta
+                    - fSqrt5_2 * m_pfTempSample[kM] * m_fCosBeta * m_fSinBeta
+                    + fSqrt3_2 * m_pfTempSample[kQ] * m_fCosBeta * m_fSinBeta;
+        _outbuff[kM*nSamples+niSample] = 0.125f * m_pfTempSample[kM] * (3.f + 5.f*m_fCos2Beta)
+                    - fSqrt5_2 * m_pfTempSample[kO] *m_fCosBeta * m_fSinBeta
+                    + 0.25f * fSqrt15 * m_pfTempSample[kQ] * pow(m_fSinBeta,2.0f);
+        _outbuff[kK*nSamples+niSample] = 0.25f * m_pfTempSample[kK] * m_fCosBeta * (-1.f + 15.f*m_fCos2Beta)
+                    + 0.5f * fSqrt15 * m_pfTempSample[kN] * m_fCosBeta * pow(m_fSinBeta,2.f)
+                    + 0.5f * fSqrt5_2 * m_pfTempSample[kP] * pow(m_fSinBeta,3.f)
+                    + 0.125f * fSqrt3_2 * m_pfTempSample[kL] * (m_fSinBeta + 5.f * m_fSin3Beta);
+        _outbuff[kL*nSamples+niSample] = 0.0625f * m_pfTempSample[kL] * (m_fCosBeta + 15.f * m_fCos3Beta)
+                    + 0.25f * fSqrt5_2 * m_pfTempSample[kN] * (1.f + 3.f * m_fCos2Beta) * m_fSinBeta
+                    + 0.25f * fSqrt15 * m_pfTempSample[kP] * m_fCosBeta * pow(m_fSinBeta,2.f)
+                    - 0.125 * fSqrt3_2 * m_pfTempSample[kK] * (m_fSinBeta + 5.f * m_fSin3Beta);
+        _outbuff[kN*nSamples+niSample] = 0.125f * m_pfTempSample[kN] * (5.f * m_fCosBeta + 3.f * m_fCos3Beta)
+                    + 0.25f * fSqrt3_2 * m_pfTempSample[kP] * (3.f + m_fCos2Beta) * m_fSinBeta
+                    + 0.5f * fSqrt15 * m_pfTempSample[kK] * m_fCosBeta * pow(m_fSinBeta,2.f)
+                    + 0.125 * fSqrt5_2 * m_pfTempSample[kL] * (m_fSinBeta - 3.f * m_fSin3Beta);
+        _outbuff[kP*nSamples+niSample] = 0.0625f * m_pfTempSample[kP] * (15.f * m_fCosBeta + m_fCos3Beta)
+                    - 0.25f * fSqrt3_2 * m_pfTempSample[kN] * (3.f + m_fCos2Beta) * m_fSinBeta
+                    + 0.25f * fSqrt15 * m_pfTempSample[kL] * m_fCosBeta * pow(m_fSinBeta,2.f)
+                    - 0.5 * fSqrt5_2 * m_pfTempSample[kK] * pow(m_fSinBeta,3.f);
+
         // Gamma rotation
-        _outbuff[IND(kQ, niSample)] = - pBFSrcDst_m_ppfChannels_kP * m_fSin3Gamma
-                            + pBFSrcDst_m_ppfChannels_kQ * m_fCos3Gamma;
-        _outbuff[IND(kO, niSample)] = - pBFSrcDst_m_ppfChannels_kN * m_fSin2Gamma
-                            + pBFSrcDst_m_ppfChannels_kO * m_fCos2Gamma;
-        _outbuff[IND(kM, niSample)] = - pBFSrcDst_m_ppfChannels_kL * m_fSinGamma
-                            + pBFSrcDst_m_ppfChannels_kM * m_fCosGamma;
-        _outbuff[IND(kK, niSample)] = pBFSrcDst_m_ppfChannels_kK;
-        _outbuff[IND(kL, niSample)] = pBFSrcDst_m_ppfChannels_kL * m_fCosGamma
-                            + pBFSrcDst_m_ppfChannels_kM * m_fSinGamma;
-        _outbuff[IND(kN, niSample)] = pBFSrcDst_m_ppfChannels_kN * m_fCos2Gamma
-                            + pBFSrcDst_m_ppfChannels_kO * m_fSin2Gamma;
-        _outbuff[IND(kP, niSample)] = pBFSrcDst_m_ppfChannels_kP * m_fCos3Gamma
-                            + pBFSrcDst_m_ppfChannels_kQ * m_fSin3Gamma;
+        m_pfTempSample[kQ] = - _outbuff[kP*nSamples+niSample] * m_fSin3Gamma
+                            + _outbuff[kQ*nSamples+niSample] * m_fCos3Gamma;
+        m_pfTempSample[kO] = - _outbuff[kN*nSamples+niSample] * m_fSin2Gamma
+                            + _outbuff[kO*nSamples+niSample] * m_fCos2Gamma;
+        m_pfTempSample[kM] = - _outbuff[kL*nSamples+niSample] * m_fSinGamma
+                            + _outbuff[kM*nSamples+niSample] * m_fCosGamma;
+        m_pfTempSample[kK] = _outbuff[kK*nSamples+niSample];
+        m_pfTempSample[kL] = _outbuff[kL*nSamples+niSample] * m_fCosGamma
+                            + _outbuff[kM*nSamples+niSample] * m_fSinGamma;
+        m_pfTempSample[kN] = _outbuff[kN*nSamples+niSample] * m_fCos2Gamma
+                            + _outbuff[kO*nSamples+niSample] * m_fSin2Gamma;
+        m_pfTempSample[kP] = _outbuff[kP*nSamples+niSample] * m_fCos3Gamma
+                            + _outbuff[kQ*nSamples+niSample] * m_fSin3Gamma;
+
+        _outbuff[kQ*nSamples+niSample] = m_pfTempSample[kQ];
+        _outbuff[kO*nSamples+niSample] = m_pfTempSample[kO];
+        _outbuff[kM*nSamples+niSample] = m_pfTempSample[kM];
+        _outbuff[kK*nSamples+niSample] = m_pfTempSample[kK];
+        _outbuff[kL*nSamples+niSample] = m_pfTempSample[kL];
+        _outbuff[kN*nSamples+niSample] = m_pfTempSample[kN];
+        _outbuff[kP*nSamples+niSample] = m_pfTempSample[kP];
+
+        // Alpha rotation
+        // m_pfTempSample_kQ = - _inbuff[IND(kP,niSample)] * m_fSin3Alpha
+        //                     + _inbuff[IND(kQ,niSample)] * m_fCos3Alpha;
+        
+        // m_pfTempSample_kO = - _inbuff[IND(kN,niSample)] * m_fSin2Alpha
+        //                     + _inbuff[IND(kO,niSample)] * m_fCos2Alpha;
+        // m_pfTempSample_kM = - _inbuff[IND(kL,niSample)] * m_fSinAlpha
+        //                     + _inbuff[IND(kM,niSample)] * m_fCosAlpha;
+        // m_pfTempSample_kK = _inbuff[IND(kK,niSample)];
+        // m_pfTempSample_kL = _inbuff[IND(kL,niSample)] * m_fCosAlpha
+        //                     + _inbuff[IND(kM,niSample)] * m_fSinAlpha;
+        // m_pfTempSample_kN = _inbuff[IND(kN,niSample)] * m_fCos2Alpha
+        //                     + _inbuff[IND(kO,niSample)] * m_fSin2Alpha;
+        // m_pfTempSample_kP = _inbuff[IND(kP,niSample)] * m_fCos3Alpha
+        //                     + _inbuff[IND(kQ,niSample)] * m_fSin3Alpha;
+        
+        // // Beta rotation
+        // pBFSrcDst_m_ppfChannels_kQ= 0.125f * m_pfTempSample_kQ * (5.f + 3.f*m_fCos2Beta)
+        //             - fSqrt3_2 * m_pfTempSample_kO *m_fCosBeta * m_fSinBeta
+        //             + 0.25f * fSqrt15 * m_pfTempSample_kM * pow(m_fSinBeta,2.0f);
+        // pBFSrcDst_m_ppfChannels_kO = m_pfTempSample_kO * m_fCos2Beta
+        //             - fSqrt5_2 * m_pfTempSample_kM * m_fCosBeta * m_fSinBeta
+        //             + fSqrt3_2 * m_pfTempSample_kQ * m_fCosBeta * m_fSinBeta;
+        // pBFSrcDst_m_ppfChannels_kM = 0.125f * m_pfTempSample_kM * (3.f + 5.f*m_fCos2Beta)
+        //             - fSqrt5_2 * m_pfTempSample_kO *m_fCosBeta * m_fSinBeta
+        //             + 0.25f * fSqrt15 * m_pfTempSample_kQ * pow(m_fSinBeta,2.0f);
+        // pBFSrcDst_m_ppfChannels_kK = 0.25f * m_pfTempSample_kK * m_fCosBeta * (-1.f + 15.f*m_fCos2Beta)
+        //             + 0.5f * fSqrt15 * m_pfTempSample_kN * m_fCosBeta * pow(m_fSinBeta,2.f)
+        //             + 0.5f * fSqrt5_2 * m_pfTempSample_kP * pow(m_fSinBeta,3.f)
+        //             + 0.125f * fSqrt3_2 * m_pfTempSample_kL * (m_fSinBeta + 5.f * m_fSin3Beta);
+        // pBFSrcDst_m_ppfChannels_kL = 0.0625f * m_pfTempSample_kL * (m_fCosBeta + 15.f * m_fCos3Beta)
+        //             + 0.25f * fSqrt5_2 * m_pfTempSample_kN * (1.f + 3.f * m_fCos2Beta) * m_fSinBeta
+        //             + 0.25f * fSqrt15 * m_pfTempSample_kP * m_fCosBeta * pow(m_fSinBeta,2.f)
+        //             - 0.125 * fSqrt3_2 * m_pfTempSample_kK * (m_fSinBeta + 5.f * m_fSin3Beta);
+        // pBFSrcDst_m_ppfChannels_kN = 0.125f * m_pfTempSample_kN * (5.f * m_fCosBeta + 3.f * m_fCos3Beta)
+        //             + 0.25f * fSqrt3_2 * m_pfTempSample_kP * (3.f + m_fCos2Beta) * m_fSinBeta
+        //             + 0.5f * fSqrt15 * m_pfTempSample_kK * m_fCosBeta * pow(m_fSinBeta,2.f)
+        //             + 0.125 * fSqrt5_2 * m_pfTempSample_kL * (m_fSinBeta - 3.f * m_fSin3Beta);
+        // pBFSrcDst_m_ppfChannels_kP = 0.0625f * m_pfTempSample_kP * (15.f * m_fCosBeta + m_fCos3Beta)
+        //             - 0.25f * fSqrt3_2 * m_pfTempSample_kN * (3.f + m_fCos2Beta) * m_fSinBeta
+        //             + 0.25f * fSqrt15 * m_pfTempSample_kL * m_fCosBeta * pow(m_fSinBeta,2.f)
+        //             - 0.5 * fSqrt5_2 * m_pfTempSample_kK * pow(m_fSinBeta,3.f);
+        
+        // // Gamma rotation
+        // _outbuff[IND(kQ, niSample)] = - pBFSrcDst_m_ppfChannels_kP * m_fSin3Gamma
+        //                     + pBFSrcDst_m_ppfChannels_kQ * m_fCos3Gamma;
+        // _outbuff[IND(kO, niSample)] = - pBFSrcDst_m_ppfChannels_kN * m_fSin2Gamma
+        //                     + pBFSrcDst_m_ppfChannels_kO * m_fCos2Gamma;
+        // _outbuff[IND(kM, niSample)] = - pBFSrcDst_m_ppfChannels_kL * m_fSinGamma
+        //                     + pBFSrcDst_m_ppfChannels_kM * m_fCosGamma;
+        // _outbuff[IND(kK, niSample)] = pBFSrcDst_m_ppfChannels_kK;
+        // _outbuff[IND(kL, niSample)] = pBFSrcDst_m_ppfChannels_kL * m_fCosGamma
+        //                     + pBFSrcDst_m_ppfChannels_kM * m_fSinGamma;
+        // _outbuff[IND(kN, niSample)] = pBFSrcDst_m_ppfChannels_kN * m_fCos2Gamma
+        //                     + pBFSrcDst_m_ppfChannels_kO * m_fSin2Gamma;
+        // _outbuff[IND(kP, niSample)] = pBFSrcDst_m_ppfChannels_kP * m_fCos3Gamma
+        //                     + pBFSrcDst_m_ppfChannels_kQ * m_fSin3Gamma;
         
     }
 }
