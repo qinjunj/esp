@@ -98,54 +98,110 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
     const int kS = 3;
     const int kU = 4; 
 
-    float m_pfTempSample[5] = {0};
+    // float m_pfTempSample[10] = {0};
+    // float temp[10] = {0}; 
     const float fSqrt3 = sqrt(3.f);
 
-    for (int niSample = 0; niSample < nSamples; niSample++) {
+    float temp[5*64] = {0};
+    float temp2[5*64] = {0}; 
+    compute_label2:for (int c = 0; c < 16; c++) {
+        // int start = c*64;
+        // int end = (c+1)*64; 
+        int disp = c*64; 
+        for (int n = 0; n < 64; n++) {
+        #pragma HLS unroll
+            temp[n] = - _inbuff[kU*nSamples+disp+n] * m_fSin2Alpha
+                      + _inbuff[kV*nSamples+disp+n] * m_fCos2Alpha;
+            temp[n+64] = - _inbuff[kS*nSamples+disp+n] * m_fSinAlpha
+                         + _inbuff[kT*nSamples+disp+n] * m_fCosAlpha;
+            temp[n+2*64] = _inbuff[kR*nSamples+disp+n];
+            temp[n+3*64] = _inbuff[kS*nSamples+disp+n] * m_fCosAlpha
+                             + _inbuff[kT*nSamples+disp+n] * m_fSinAlpha;
+            temp[n+4*64] = _inbuff[kU*nSamples+disp+n] * m_fCos2Alpha
+                             + _inbuff[kV*nSamples+disp+n] * m_fSin2Alpha;
+        }
+        for (int n = 0; n < 64; n++) {
+        #pragma HLS unroll
+            temp2[n] = -m_fSinBeta * temp[kT*64+n]
+                       + m_fCosBeta * temp[kV*64+n];
+            temp2[n+64] = -m_fCosBeta * temp[kT*64+n]
+                                + m_fSinBeta * temp[kV*64+n];
+            temp2[n+2*64] = (0.75f * m_fCos2Beta + 0.25f) * temp[kR*64+n]
+                                + (0.5 * fSqrt3 * pow(m_fSinBeta,2.0) ) * temp[kU*64+n]
+                                + (fSqrt3 * m_fSinBeta * m_fCosBeta) * temp[kS*64+n];
+            temp2[n+3*64] = m_fCos2Beta * temp[kS*64+n]
+                                - fSqrt3 * m_fCosBeta * m_fSinBeta * temp[kR*64+n]
+                                + m_fCosBeta * m_fSinBeta * temp[kU*64+n];
+            temp2[n+4*64] = (0.25f * m_fCos2Beta + 0.75f) * temp[kU*64+n]
+                                - m_fCosBeta * m_fSinBeta * temp[kS*64+n]
+                                +0.5 * fSqrt3 * pow(m_fSinBeta,2.0) * temp[kR*64+n];
+        }
+        for (int n = 0; n < 64; n++) {
+        #pragma HLS unroll 
+            _outbuff[kV*nSamples+disp+n] = - temp2[kU*64+n] * m_fSin2Gamma
+                            + temp2[kV*64+n] * m_fCos2Gamma;
+            _outbuff[kT*nSamples+disp+n] = - temp2[kS*64+n] * m_fSinGamma
+                             + temp2[kT*64+n] * m_fCosGamma;
+
+            _outbuff[kR*nSamples+disp+n] = temp2[kR*64+n];
+            _outbuff[kS*nSamples+disp+n] = temp2[kS*64+n] * m_fCosGamma
+                             + temp2[kT*64+n] * m_fSinGamma;
+            _outbuff[kU*nSamples+disp+n] = temp2[kU*64+n] * m_fCos2Gamma
+                             + temp2[kV*64+n] * m_fSin2Gamma;
+        }
+        
+    }
+/*
+    compute_label2:for (int niSample = 0; niSample < nSamples; niSample++) {
+        #pragma HLS unroll factor=2
+        int s = niSample%2 == 0 ? 0 : 5; 
         // Alpha rotation 
-        m_pfTempSample[kV] = - _inbuff[kU*nSamples+niSample] * m_fSin2Alpha
+        m_pfTempSample[0+s] = - _inbuff[kU*nSamples+niSample] * m_fSin2Alpha
                             + _inbuff[kV*nSamples+niSample] * m_fCos2Alpha;
-        m_pfTempSample[kT] = - _inbuff[kS*nSamples+niSample] * m_fSinAlpha
+        m_pfTempSample[1+s] = - _inbuff[kS*nSamples+niSample] * m_fSinAlpha
                             + _inbuff[kT*nSamples+niSample] * m_fCosAlpha;
-        m_pfTempSample[kR] = _inbuff[kR*nSamples+niSample];
-        m_pfTempSample[kS] = _inbuff[kS*nSamples+niSample] * m_fCosAlpha
+        m_pfTempSample[2+s] = _inbuff[kR*nSamples+niSample];
+        m_pfTempSample[3+s] = _inbuff[kS*nSamples+niSample] * m_fCosAlpha
                              + _inbuff[kT*nSamples+niSample] * m_fSinAlpha;
-        m_pfTempSample[kU] = _inbuff[kU*nSamples+niSample] * m_fCos2Alpha
+        m_pfTempSample[4+s] = _inbuff[kU*nSamples+niSample] * m_fCos2Alpha
                              + _inbuff[kV*nSamples+niSample] * m_fSin2Alpha;
         // Beta rotation
-        _outbuff[kV*nSamples+niSample] = -m_fSinBeta * m_pfTempSample[kT]
-                                + m_fCosBeta * m_pfTempSample[kV];
-        _outbuff[kT*nSamples+niSample] = -m_fCosBeta * m_pfTempSample[kT]
-                                + m_fSinBeta * m_pfTempSample[kV];
-        _outbuff[kR*nSamples+niSample] = (0.75f * m_fCos2Beta + 0.25f) * m_pfTempSample[kR]
-                                + (0.5 * fSqrt3 * pow(m_fSinBeta,2.0) ) * m_pfTempSample[kU]
-                                + (fSqrt3 * m_fSinBeta * m_fCosBeta) * m_pfTempSample[kS];
-        _outbuff[kS*nSamples+niSample] = m_fCos2Beta * m_pfTempSample[kS]
-                                - fSqrt3 * m_fCosBeta * m_fSinBeta * m_pfTempSample[kR]
-                                + m_fCosBeta * m_fSinBeta * m_pfTempSample[kU];
-        _outbuff[kU*nSamples+niSample] = (0.25f * m_fCos2Beta + 0.75f) * m_pfTempSample[kU]
-                                - m_fCosBeta * m_fSinBeta * m_pfTempSample[kS]
-                                +0.5 * fSqrt3 * pow(m_fSinBeta,2.0) * m_pfTempSample[kR];
+        temp[0] = -m_fSinBeta * m_pfTempSample[1]
+                                + m_fCosBeta * m_pfTempSample[0];
+        temp[1] = -m_fCosBeta * m_pfTempSample[1]
+                                + m_fSinBeta * m_pfTempSample[0];
+        temp[2] = (0.75f * m_fCos2Beta + 0.25f) * m_pfTempSample[2]
+                                + (0.5 * fSqrt3 * pow(m_fSinBeta,2.0) ) * m_pfTempSample[4]
+                                + (fSqrt3 * m_fSinBeta * m_fCosBeta) * m_pfTempSample[3];
+        temp[3] = m_fCos2Beta * m_pfTempSample[3]
+                                - fSqrt3 * m_fCosBeta * m_fSinBeta * m_pfTempSample[2]
+                                + m_fCosBeta * m_fSinBeta * m_pfTempSample[4];
+        temp[4] = (0.25f * m_fCos2Beta + 0.75f) * m_pfTempSample[4]
+                                - m_fCosBeta * m_fSinBeta * m_pfTempSample[3]
+                                +0.5 * fSqrt3 * pow(m_fSinBeta,2.0) * m_pfTempSample[2];
 
         // Gamma rotation
-        m_pfTempSample[kV] = - _outbuff[kU*nSamples+niSample] * m_fSin2Gamma
-                            + _outbuff[kV*nSamples+niSample] * m_fCos2Gamma;
-        m_pfTempSample[kT] = - _outbuff[kS*nSamples+niSample] * m_fSinGamma
-                             + _outbuff[kT*nSamples+niSample] * m_fCosGamma;
+        _outbuff[0] = - temp[4] * m_fSin2Gamma
+                            + temp[0] * m_fCos2Gamma;
+        _outbuff[1] = - temp[3] * m_fSinGamma
+                             + temp[1] * m_fCosGamma;
 
-        m_pfTempSample[kR] = _outbuff[kR*nSamples+niSample];
-        m_pfTempSample[kS] = _outbuff[kS*nSamples+niSample] * m_fCosGamma
-                             + _outbuff[kT*nSamples+niSample] * m_fSinGamma;
-        m_pfTempSample[kU] = _outbuff[kU*nSamples+niSample] * m_fCos2Gamma
-                             + _outbuff[kV*nSamples+niSample] * m_fSin2Gamma;
+        _outbuff[2] = temp[2];
+        _outbuff[3] = temp[3] * m_fCosGamma
+                             + temp[1] * m_fSinGamma;
+        _outbuff[4] = temp[4] * m_fCos2Gamma
+                             + temp[0] * m_fSin2Gamma;
+*/
+/*
+        _outbuff[kR*nSamples+niSample] = m_pfTempSample[kR*nSamples+niSample];
+        _outbuff[kS*nSamples+niSample] = m_pfTempSample[kS*nSamples+niSample];
+        _outbuff[kT*nSamples+niSample] = m_pfTempSample[kT*nSamples+niSample];
+        _outbuff[kU*nSamples+niSample] = m_pfTempSample[kU*nSamples+niSample];
+        _outbuff[kV*nSamples+niSample] = m_pfTempSample[kV*nSamples+niSample];
+*/
 
-        _outbuff[kR*nSamples+niSample] = m_pfTempSample[kR];
-        _outbuff[kS*nSamples+niSample] = m_pfTempSample[kS];
-        _outbuff[kT*nSamples+niSample] = m_pfTempSample[kT];
-        _outbuff[kU*nSamples+niSample] = m_pfTempSample[kU];
-        _outbuff[kV*nSamples+niSample] = m_pfTempSample[kV];
-
-    }
+//    }
+    
 }
 
 
