@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sld>
   <accelerator name="rotateorder3" desc="Accelerator ROTATEORDER3" data_size="4" device_id="060" hls_tool="vivado_hls">
+    <param name="cosB3" desc="cosB3" />
+    <param name="cosB2" desc="cosB2" />
+    <param name="cosB1" desc="cosB1" />
+    <param name="sinG3" desc="sinG3" />
+    <param name="sinG2" desc="sinG2" />
+    <param name="sinG1" desc="sinG1" />
     <param name="nSamples" desc="nSamples" />
+    <param name="cosG1" desc="cosG1" />
+    <param name="cosG2" desc="cosG2" />
+    <param name="cosG3" desc="cosG3" />
+    <param name="sinA1" desc="sinA1" />
+    <param name="sinA3" desc="sinA3" />
+    <param name="sinA2" desc="sinA2" />
+    <param name="sinB1" desc="sinB1" />
+    <param name="sinB2" desc="sinB2" />
+    <param name="sinB3" desc="sinB3" />
+    <param name="nChannels" desc="nChannels" />
+    <param name="cosA2" desc="cosA2" />
+    <param name="cosA3" desc="cosA3" />
+    <param name="cosA1" desc="cosA1" />
+    <param name="nBatches" desc="nBatches" />
   </accelerator>
 </sld>

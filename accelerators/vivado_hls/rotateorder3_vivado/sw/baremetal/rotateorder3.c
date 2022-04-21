@@ -22,7 +22,27 @@ static unsigned DMA_WORD_PER_BEAT(unsigned _st)
 #define DEV_NAME "sld,rotateorder3_vivado"
 
 /* <<--params-->> */
+const int32_t nBatches = 1;
+const int32_t cosA1 = -4.37114e-08;
+const int32_t cosA3 = 1.19249e-08;
+const int32_t cosA2 = -1;
+const int32_t nChannels = 7;
+const int32_t sinB3 = -0.00318557;
+const int32_t sinB2 = -0.864962;
+const int32_t sinB1 = 0.866556;
+const int32_t sinA2 = 8.74228e-08;
+const int32_t sinA3 = 1;
+const int32_t sinA1 = -1;
+const int32_t cosG3 = 1.19249e-08;
+const int32_t cosG2 = -1;
+const int32_t cosG1 = -4.37114e-08;
 const int32_t nSamples = 1024;
+const int32_t sinG1 = 1;
+const int32_t sinG2 = -8.74228e-08;
+const int32_t sinG3 = -1;
+const int32_t cosB1 = -0.49908;
+const int32_t cosB2 = -0.501838;
+const int32_t cosB3 = 0.999995;
 
 static unsigned in_words_adj;
 static unsigned out_words_adj;
@@ -42,7 +62,27 @@ static unsigned mem_size;
 
 /* User defined registers */
 /* <<--regs-->> */
-#define ROTATEORDER3_NSAMPLES_REG 0x40
+#define ROTATEORDER3_NBATCHES_REG 0x90
+#define ROTATEORDER3_COSA1_REG 0x8c
+#define ROTATEORDER3_COSA3_REG 0x88
+#define ROTATEORDER3_COSA2_REG 0x84
+#define ROTATEORDER3_NCHANNELS_REG 0x80
+#define ROTATEORDER3_SINB3_REG 0x7c
+#define ROTATEORDER3_SINB2_REG 0x78
+#define ROTATEORDER3_SINB1_REG 0x74
+#define ROTATEORDER3_SINA2_REG 0x70
+#define ROTATEORDER3_SINA3_REG 0x6c
+#define ROTATEORDER3_SINA1_REG 0x68
+#define ROTATEORDER3_COSG3_REG 0x64
+#define ROTATEORDER3_COSG2_REG 0x60
+#define ROTATEORDER3_COSG1_REG 0x5c
+#define ROTATEORDER3_NSAMPLES_REG 0x58
+#define ROTATEORDER3_SING1_REG 0x54
+#define ROTATEORDER3_SING2_REG 0x50
+#define ROTATEORDER3_SING3_REG 0x4c
+#define ROTATEORDER3_COSB1_REG 0x48
+#define ROTATEORDER3_COSB2_REG 0x44
+#define ROTATEORDER3_COSB3_REG 0x40
 
 
 static int validate_buf(token_t *out, token_t *gold)
@@ -51,8 +91,8 @@ static int validate_buf(token_t *out, token_t *gold)
 	int j;
 	unsigned errors = 0;
 
-	for (i = 0; i < 1; i++)
-		for (j = 0; j < nSamples; j++)
+	for (i = 0; i < nBatches; i++)
+		for (j = 0; j < nChannels*nSamples; j++)
 			if (gold[i * out_words_adj + j] != out[i * out_words_adj + j])
 				errors++;
 
@@ -65,12 +105,12 @@ static void init_buf (token_t *in, token_t * gold)
 	int i;
 	int j;
 
-	for (i = 0; i < 1; i++)
-		for (j = 0; j < nSamples; j++)
+	for (i = 0; i < nBatches; i++)
+		for (j = 0; j < nChannels*nSamples; j++)
 			in[i * in_words_adj + j] = (token_t) j;
 
-	for (i = 0; i < 1; i++)
-		for (j = 0; j < nSamples; j++)
+	for (i = 0; i < nBatches; i++)
+		for (j = 0; j < nChannels*nSamples; j++)
 			gold[i * out_words_adj + j] = (token_t) j;
 }
 
@@ -90,17 +130,17 @@ int main(int argc, char * argv[])
 	unsigned coherence;
 
 	if (DMA_WORD_PER_BEAT(sizeof(token_t)) == 0) {
-		in_words_adj = nSamples;
-		out_words_adj = nSamples;
+		in_words_adj = nChannels*nSamples;
+		out_words_adj = nChannels*nSamples;
 	} else {
-		in_words_adj = round_up(nSamples, DMA_WORD_PER_BEAT(sizeof(token_t)));
-		out_words_adj = round_up(nSamples, DMA_WORD_PER_BEAT(sizeof(token_t)));
+		in_words_adj = round_up(nChannels*nSamples, DMA_WORD_PER_BEAT(sizeof(token_t)));
+		out_words_adj = round_up(nChannels*nSamples, DMA_WORD_PER_BEAT(sizeof(token_t)));
 	}
-	in_len = in_words_adj * (1);
-	out_len = out_words_adj * (1);
+	in_len = in_words_adj * (nBatches);
+	out_len = out_words_adj * (nBatches);
 	in_size = in_len * sizeof(token_t);
 	out_size = out_len * sizeof(token_t);
-	out_offset  = in_len;
+	out_offset  = 0;
 	mem_size = (out_offset * sizeof(token_t)) + out_size;
 
 
@@ -173,7 +213,27 @@ int main(int argc, char * argv[])
 
 			// Pass accelerator-specific configuration parameters
 			/* <<--regs-config-->> */
+		iowrite32(dev, ROTATEORDER3_NBATCHES_REG, nBatches);
+		iowrite32(dev, ROTATEORDER3_COSA1_REG, cosA1);
+		iowrite32(dev, ROTATEORDER3_COSA3_REG, cosA3);
+		iowrite32(dev, ROTATEORDER3_COSA2_REG, cosA2);
+		iowrite32(dev, ROTATEORDER3_NCHANNELS_REG, nChannels);
+		iowrite32(dev, ROTATEORDER3_SINB3_REG, sinB3);
+		iowrite32(dev, ROTATEORDER3_SINB2_REG, sinB2);
+		iowrite32(dev, ROTATEORDER3_SINB1_REG, sinB1);
+		iowrite32(dev, ROTATEORDER3_SINA2_REG, sinA2);
+		iowrite32(dev, ROTATEORDER3_SINA3_REG, sinA3);
+		iowrite32(dev, ROTATEORDER3_SINA1_REG, sinA1);
+		iowrite32(dev, ROTATEORDER3_COSG3_REG, cosG3);
+		iowrite32(dev, ROTATEORDER3_COSG2_REG, cosG2);
+		iowrite32(dev, ROTATEORDER3_COSG1_REG, cosG1);
 		iowrite32(dev, ROTATEORDER3_NSAMPLES_REG, nSamples);
+		iowrite32(dev, ROTATEORDER3_SING1_REG, sinG1);
+		iowrite32(dev, ROTATEORDER3_SING2_REG, sinG2);
+		iowrite32(dev, ROTATEORDER3_SING3_REG, sinG3);
+		iowrite32(dev, ROTATEORDER3_COSB1_REG, cosB1);
+		iowrite32(dev, ROTATEORDER3_COSB2_REG, cosB2);
+		iowrite32(dev, ROTATEORDER3_COSB3_REG, cosB3);
 
 			// Flush (customize coherence model here)
 			esp_flush(coherence);

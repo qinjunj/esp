@@ -10,7 +10,7 @@
 #define IS_TYPE_FIXED_POINT 0
 #define FRAC_BITS 0
 #define IS_TYPE_UINT 0
-#define IS_TYPE_INT 1
+#define IS_TYPE_INT 0
 #define IS_TYPE_FLOAT 1
 
 // In/out arrays
