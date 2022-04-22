@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     printf("****start*****\n");
 
     /* <<--params-->> */
-	 const unsigned nBatches = 1;
+	 const unsigned nBatches = 32;
 	 const unsigned nChannels = 5;
 	 const unsigned nSamples = 1024;
 

@@ -46,7 +46,7 @@ static float my_abs(float a){
 #define DEV_NAME "sld,dummy_vivado"
 
 /* <<--params-->> */
-const int32_t nBatches = 1;
+const int32_t nBatches = 32;
 const int32_t nChannels = 5;
 const int32_t nSamples = 1024;
 
