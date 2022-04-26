@@ -73,7 +73,7 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
     const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 32;
 
     for (int i = 0; i < length; i++) {
-        #pragma HLS unroll
+        //#pragma HLS unroll
         _outbuff[i] = _inbuff[i];
     }
         

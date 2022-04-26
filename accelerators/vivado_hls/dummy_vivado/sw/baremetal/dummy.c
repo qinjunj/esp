@@ -48,7 +48,7 @@ static float my_abs(float a){
 /* <<--params-->> */
 const int32_t nBatches = 32;
 const int32_t nChannels = 5;
-const int32_t nSamples = 1024;
+const int32_t nSamples = 1024/32;
 
 static unsigned in_words_adj;
 static unsigned out_words_adj;
@@ -222,7 +222,7 @@ int main(int argc, char * argv[])
 			esp_flush(coherence);
 
 			// Start accelerators
-			printf("  Start...\n");
+			//printf("  Start...\n");
 			iowrite32(dev, CMD_REG, CMD_MASK_START);
 
 			// Wait for completion
