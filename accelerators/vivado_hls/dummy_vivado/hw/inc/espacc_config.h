@@ -10,13 +10,13 @@
 #define IS_TYPE_FIXED_POINT 0
 #define FRAC_BITS 0
 #define IS_TYPE_UINT 0
-#define IS_TYPE_INT 0
-#define IS_TYPE_FLOAT 1
+#define IS_TYPE_INT 1
+#define IS_TYPE_FLOAT 0
 
 // In/out arrays
 
-#define SIZE_IN_CHUNK_DATA 7168
+#define SIZE_IN_CHUNK_DATA 160
 
-#define SIZE_OUT_CHUNK_DATA 7168
+#define SIZE_OUT_CHUNK_DATA 160
 
 #endif

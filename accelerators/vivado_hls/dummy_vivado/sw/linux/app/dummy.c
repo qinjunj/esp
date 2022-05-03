@@ -82,26 +82,8 @@ int main(int argc, char **argv)
 	printf("\n====== %s ======\n\n", cfg_000[0].devname);
 	/* <<--print-params-->> */
 	printf("  .nBatches = %d\n", nBatches);
-	printf("  .cosA1 = %d\n", cosA1);
-	printf("  .cosA3 = %d\n", cosA3);
-	printf("  .cosA2 = %d\n", cosA2);
 	printf("  .nChannels = %d\n", nChannels);
-	printf("  .sinB3 = %d\n", sinB3);
-	printf("  .sinB2 = %d\n", sinB2);
-	printf("  .sinB1 = %d\n", sinB1);
-	printf("  .sinA2 = %d\n", sinA2);
-	printf("  .sinA3 = %d\n", sinA3);
-	printf("  .sinA1 = %d\n", sinA1);
-	printf("  .cosG3 = %d\n", cosG3);
-	printf("  .cosG2 = %d\n", cosG2);
-	printf("  .cosG1 = %d\n", cosG1);
 	printf("  .nSamples = %d\n", nSamples);
-	printf("  .sinG1 = %d\n", sinG1);
-	printf("  .sinG2 = %d\n", sinG2);
-	printf("  .sinG3 = %d\n", sinG3);
-	printf("  .cosB1 = %d\n", cosB1);
-	printf("  .cosB2 = %d\n", cosB2);
-	printf("  .cosB3 = %d\n", cosB3);
 	printf("\n  ** START **\n");
 
 	esp_run(cfg_000, NACC);

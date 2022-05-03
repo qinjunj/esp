@@ -13,7 +13,27 @@
 #define DRV_NAME	"rotateorder3_vivado"
 
 /* <<--regs-->> */
-#define ROTATEORDER3_NSAMPLES_REG 0x40
+#define ROTATEORDER3_NBATCHES_REG 0x90
+#define ROTATEORDER3_COSA1_REG 0x8c
+#define ROTATEORDER3_COSA3_REG 0x88
+#define ROTATEORDER3_COSA2_REG 0x84
+#define ROTATEORDER3_NCHANNELS_REG 0x80
+#define ROTATEORDER3_SINB3_REG 0x7c
+#define ROTATEORDER3_SINB2_REG 0x78
+#define ROTATEORDER3_SINB1_REG 0x74
+#define ROTATEORDER3_SINA2_REG 0x70
+#define ROTATEORDER3_SINA3_REG 0x6c
+#define ROTATEORDER3_SINA1_REG 0x68
+#define ROTATEORDER3_COSG3_REG 0x64
+#define ROTATEORDER3_COSG2_REG 0x60
+#define ROTATEORDER3_COSG1_REG 0x5c
+#define ROTATEORDER3_NSAMPLES_REG 0x58
+#define ROTATEORDER3_SING1_REG 0x54
+#define ROTATEORDER3_SING2_REG 0x50
+#define ROTATEORDER3_SING3_REG 0x4c
+#define ROTATEORDER3_COSB1_REG 0x48
+#define ROTATEORDER3_COSB2_REG 0x44
+#define ROTATEORDER3_COSB3_REG 0x40
 
 struct rotateorder3_vivado_device {
 	struct esp_device esp;
@@ -46,7 +66,27 @@ static void rotateorder3_prep_xfer(struct esp_device *esp, void *arg)
 	struct rotateorder3_vivado_access *a = arg;
 
 	/* <<--regs-config-->> */
+	iowrite32be(a->nBatches, esp->iomem + ROTATEORDER3_NBATCHES_REG);
+	iowrite32be(a->cosA1, esp->iomem + ROTATEORDER3_COSA1_REG);
+	iowrite32be(a->cosA3, esp->iomem + ROTATEORDER3_COSA3_REG);
+	iowrite32be(a->cosA2, esp->iomem + ROTATEORDER3_COSA2_REG);
+	iowrite32be(a->nChannels, esp->iomem + ROTATEORDER3_NCHANNELS_REG);
+	iowrite32be(a->sinB3, esp->iomem + ROTATEORDER3_SINB3_REG);
+	iowrite32be(a->sinB2, esp->iomem + ROTATEORDER3_SINB2_REG);
+	iowrite32be(a->sinB1, esp->iomem + ROTATEORDER3_SINB1_REG);
+	iowrite32be(a->sinA2, esp->iomem + ROTATEORDER3_SINA2_REG);
+	iowrite32be(a->sinA3, esp->iomem + ROTATEORDER3_SINA3_REG);
+	iowrite32be(a->sinA1, esp->iomem + ROTATEORDER3_SINA1_REG);
+	iowrite32be(a->cosG3, esp->iomem + ROTATEORDER3_COSG3_REG);
+	iowrite32be(a->cosG2, esp->iomem + ROTATEORDER3_COSG2_REG);
+	iowrite32be(a->cosG1, esp->iomem + ROTATEORDER3_COSG1_REG);
 	iowrite32be(a->nSamples, esp->iomem + ROTATEORDER3_NSAMPLES_REG);
+	iowrite32be(a->sinG1, esp->iomem + ROTATEORDER3_SING1_REG);
+	iowrite32be(a->sinG2, esp->iomem + ROTATEORDER3_SING2_REG);
+	iowrite32be(a->sinG3, esp->iomem + ROTATEORDER3_SING3_REG);
+	iowrite32be(a->cosB1, esp->iomem + ROTATEORDER3_COSB1_REG);
+	iowrite32be(a->cosB2, esp->iomem + ROTATEORDER3_COSB2_REG);
+	iowrite32be(a->cosB3, esp->iomem + ROTATEORDER3_COSB3_REG);
 	iowrite32be(a->src_offset, esp->iomem + SRC_OFFSET_REG);
 	iowrite32be(a->dst_offset, esp->iomem + DST_OFFSET_REG);
 

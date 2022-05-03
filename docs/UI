@@ -1,0 +1,5 @@
+ssh -Y ...
+cd esp/
+cd accelerators/vivado_hls/rotateorder#_vivado
+cd hw/hls-work-virtex7/rotateorder3_vivado_dma32_w32
+vivado_hls vivado_hls.app
