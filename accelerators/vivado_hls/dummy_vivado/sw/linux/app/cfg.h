@@ -9,9 +9,9 @@
 typedef int32_t token_t;
 
 /* <<--params-def-->> */
-#define NBATCHES 1
+#define NBATCHES 32
 #define NCHANNELS 5
-#define NSAMPLES 1024
+#define NSAMPLES 1024/32
 
 /* <<--params-->> */
 const int32_t nBatches = NBATCHES;

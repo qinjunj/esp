@@ -15,8 +15,8 @@ void load(word_t _inbuff[SIZE_IN_CHUNK_DATA], dma_word_t *in1,
 {
 load_data:
 
-    const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 1;
-    const unsigned index = length * (batch * 1 + chunk);
+    const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 32;
+    const unsigned index = length * (batch * 32 + chunk);
 
     unsigned dma_length = length / VALUES_PER_WORD;
     unsigned dma_index = index / VALUES_PER_WORD;
@@ -41,10 +41,10 @@ void store(word_t _outbuff[SIZE_OUT_CHUNK_DATA], dma_word_t *out,
 {
 store_data:
 
-    const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 1;
+    const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 32;
     const unsigned store_offset = round_up(nChannels*nSamples, VALUES_PER_WORD) * nBatches;
     const unsigned out_offset = 0;
-    const unsigned index = out_offset + length * (batch * 1 + chunk);
+    const unsigned index = out_offset + length * (batch * 32 + chunk);
 
     unsigned dma_length = length / VALUES_PER_WORD;
     unsigned dma_index = index / VALUES_PER_WORD;
@@ -70,10 +70,10 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
 {
 
     // TODO implement compute functionality
-    const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 1;
+    const unsigned length = round_up(nChannels*nSamples, VALUES_PER_WORD) / 32;
 
     for (int i = 0; i < length; i++) {
-        #pragma HLS unroll
+        //#pragma HLS unroll
         _outbuff[i] = _inbuff[i];
     }
         
@@ -99,7 +99,7 @@ batching:
     {
         // Chunking
     go:
-        for (int c = 0; c < 1; c++)
+        for (int c = 0; c < 32; c++)
         {
             word_t _inbuff[SIZE_IN_CHUNK_DATA];
             word_t _outbuff[SIZE_OUT_CHUNK_DATA];

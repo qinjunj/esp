@@ -15,8 +15,8 @@
 
 // In/out arrays
 
-#define SIZE_IN_CHUNK_DATA 5120
+#define SIZE_IN_CHUNK_DATA 160
 
-#define SIZE_OUT_CHUNK_DATA 5120
+#define SIZE_OUT_CHUNK_DATA 160
 
 #endif

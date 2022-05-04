@@ -12,9 +12,9 @@ int main(int argc, char **argv) {
     printf("****start*****\n");
 
     /* <<--params-->> */
-	 const unsigned nBatches = 1;
+	 const unsigned nBatches = 32;
 	 const unsigned nChannels = 5;
-	 const unsigned nSamples = 1024;
+	 const unsigned nSamples = 1024/32;
 
     uint32_t in_words_adj;
     uint32_t out_words_adj;
