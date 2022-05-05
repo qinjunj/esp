@@ -142,7 +142,7 @@ void compute(word_t _inbuff0[1024], word_t _inbuff1[1024], word_t _inbuff2[1024]
     word_t buffer4[64] = {0};
 
     compute_label2:for (int c = 0; c < 16; c++) {
-        // #pragma HLS pipeline II = 1
+        #pragma HLS pipeline II = 1
         int disp = c*64;
         for (int n = 0; n < 64; n++) {
             buffer0[n] = _inbuff0[disp+n];
@@ -270,18 +270,17 @@ batching:
         {
             // word_t _inbuff[SIZE_IN_CHUNK_DATA];
             word_t _outbuff[SIZE_OUT_CHUNK_DATA];
-
             word_t _inbuff0[1024];
             word_t _inbuff1[1024];
             word_t _inbuff2[1024];
             word_t _inbuff3[1024];
             word_t _inbuff4[1024];
 
-            word_t _outbuff0[1024];
-            word_t _outbuff1[1024];
-            word_t _outbuff2[1024];
-            word_t _outbuff3[1024];
-            word_t _outbuff4[1024];
+            // word_t _outbuff0[1024];
+            // word_t _outbuff1[1024];
+            // word_t _outbuff2[1024];
+            // word_t _outbuff3[1024];
+            // word_t _outbuff4[1024];
 
             #pragma HLS dataflow
             load(_inbuff0, _inbuff1, _inbuff2, _inbuff3, _inbuff4, in1, nBatches, channels, nSamples, load_ctrl, c, b);
