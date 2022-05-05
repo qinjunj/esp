@@ -6,12 +6,12 @@
 #include "hls_math.h"
 #include <cstring>
 
-void load(word_t _inbuff[SIZE_IN_CHUNK_DATA], dma_word_t *in1,
+void load(word_t _inbuff0[1024], word_t _inbuff1[1024], word_t _inbuff2[1024], word_t _inbuff3[1024], word_t _inbuff4[1024], dma_word_t *in1,
           /* <<--compute-params-->> */
-	 const unsigned nBatches,
-	 const unsigned channels,
-	 const unsigned nSamples,
-	  dma_info_t &load_ctrl, int chunk, int batch)
+     const unsigned nBatches,
+     const unsigned channels,
+     const unsigned nSamples,
+      dma_info_t &load_ctrl, int chunk, int batch)
 {
 load_data:
 
@@ -24,20 +24,29 @@ load_data:
     load_ctrl.index = dma_index;
     load_ctrl.length = dma_length;
     load_ctrl.size = SIZE_WORD_T;
+    
+    unsigned words_per_channel = 1024/VALUES_PER_WORD;
+    unsigned offset2 =  words_per_channel * 2;
+    unsigned offset3 =  words_per_channel * 3;
+    unsigned offset4 =  words_per_channel * 4;
 
-    for (unsigned i = 0; i < dma_length; i++) {
-    load_label0:for(unsigned j = 0; j < VALUES_PER_WORD; j++) {
-	    _inbuff[i * VALUES_PER_WORD + j] = in1[dma_index + i].word[j];
-    	}
+    for (unsigned k = 0; k < words_per_channel; k++) {
+        load_label0:for(unsigned j = 0; j < VALUES_PER_WORD; j++) {
+                        _inbuff0[k * VALUES_PER_WORD + j] = in1[dma_index + k].word[j];
+                        _inbuff1[k * VALUES_PER_WORD + j] = in1[dma_index + k + words_per_channel].word[j];
+                        _inbuff2[k * VALUES_PER_WORD + j] = in1[dma_index + k + offset2].word[j];
+                        _inbuff3[k * VALUES_PER_WORD + j] = in1[dma_index + k + offset3].word[j];
+                        _inbuff4[k * VALUES_PER_WORD + j] = in1[dma_index + k + offset4].word[j];
+                    }
     }
 }
 
 void store(word_t _outbuff[SIZE_OUT_CHUNK_DATA], dma_word_t *out,
           /* <<--compute-params-->> */
-	 const unsigned nBatches,
-	 const unsigned channels,
-	 const unsigned nSamples,
-	   dma_info_t &store_ctrl, int chunk, int batch)
+     const unsigned nBatches,
+     const unsigned channels,
+     const unsigned nSamples,
+       dma_info_t &store_ctrl, int chunk, int batch)
 {
 store_data:
 
@@ -55,17 +64,17 @@ store_data:
 
     for (unsigned i = 0; i < dma_length; i++) {
     store_label1:for(unsigned j = 0; j < VALUES_PER_WORD; j++) {
-	    out[dma_index + i].word[j] = _outbuff[i * VALUES_PER_WORD + j];
-	}
+        out[dma_index + i].word[j] = _outbuff[i * VALUES_PER_WORD + j];
+    }
     }
 }
 
 
-void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
+void compute(word_t _inbuff0[1024], word_t _inbuff1[1024], word_t _inbuff2[1024], word_t _inbuff3[1024], word_t _inbuff4[1024],
              /* <<--compute-params-->> */
-	 const unsigned nBatches,
-	 const unsigned channels,
-	 const unsigned nSamples,
+     const unsigned nBatches,
+     const unsigned channels,
+     const unsigned nSamples,
              word_t _outbuff[SIZE_OUT_CHUNK_DATA])
 {
 
@@ -74,9 +83,9 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
     const word_t m_fCosAlpha = -4.37114e-08;
     const word_t m_fSinAlpha = -1;
     const word_t m_fCosBeta = -0.49908;
-    const word_t m_fSinBeta = 0.866556; 
-    const word_t m_fCosGamma = -4.37114e-08; 
-    const word_t m_fSinGamma = 1; 
+    const word_t m_fSinBeta = 0.866556;
+    const word_t m_fCosGamma = -4.37114e-08;
+    const word_t m_fSinGamma = 1;
     const word_t m_fCos2Alpha = -1;
     const word_t m_fSin2Alpha = 8.74228e-08;
     const word_t m_fCos2Beta = -0.501838;
@@ -90,26 +99,26 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
     const float m_fSin3Beta = -0.00318557;
     const float m_fCos3Gamma = 1.19249e-08;
     const float m_fSin3Gamma = -1;
-    */ 
+    */
 /*
     const int kV = 0;
     const int kT = 1;
     const int kR = 2;
     const int kS = 3;
-    const int kU = 4; 
-*/ 
+    const int kU = 4;
+*/
 
     // float m_pfTempSample[10] = {0};
-    // float temp[10] = {0}; 
+    // float temp[10] = {0};
     const word_t fSqrt3 = sqrt(3.f);
 /*
     compute_label2:for (int n = 0; n < nSamples; n++) {
     // #pragma HLS unroll
-        _outbuff[kV*nSamples+n] = _inbuff[kV*nSamples+n] * fSqrt3; 
+        _outbuff[kV*nSamples+n] = _inbuff[kV*nSamples+n] * fSqrt3;
             _outbuff[kT*nSamples+n] = _inbuff[kT*nSamples+n] * fSqrt3;
             _outbuff[kR*nSamples+n] = _inbuff[kR*nSamples+n] * fSqrt3;
-            _outbuff[kS*nSamples+n] = _inbuff[kS*nSamples+n] * fSqrt3; 
-            _outbuff[kU*nSamples+n] = _inbuff[kU*nSamples+n] * fSqrt3; 
+            _outbuff[kS*nSamples+n] = _inbuff[kS*nSamples+n] * fSqrt3;
+            _outbuff[kU*nSamples+n] = _inbuff[kU*nSamples+n] * fSqrt3;
     }
 */
     
@@ -117,31 +126,30 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
     word_t temp1[64] = {0};
     word_t temp2[64] = {0};
     word_t temp3[64] = {0};
-    word_t temp4[64] = {0}; 
+    word_t temp4[64] = {0};
 
-    word_t t0[64] = {0}; 
+    word_t t0[64] = {0};
     word_t t1[64] = {0};
     word_t t2[64] = {0};
     word_t t3[64] = {0};
-    word_t t4[64] = {0}; 
+    word_t t4[64] = {0};
 
     // for buffering _inbuff
     word_t buffer0[64] = {0};
-    word_t buffer1[64] = {0}; 
+    word_t buffer1[64] = {0};
     word_t buffer2[64] = {0};
     word_t buffer3[64] = {0};
     word_t buffer4[64] = {0};
 
     compute_label2:for (int c = 0; c < 16; c++) {
-        // int start = c*64;
-        // int end = (c+1)*64; 
-        int disp = c*64; 
+        // #pragma HLS pipeline II = 1
+        int disp = c*64;
         for (int n = 0; n < 64; n++) {
-            buffer0[n] = _inbuff[disp+n];
-            buffer1[n] = _inbuff[1024+disp+n];
-            buffer2[n] = _inbuff[2048+disp+n];
-            buffer3[n] = _inbuff[3072+disp+n];
-            buffer4[n] = _inbuff[4096+disp+n]; 
+            buffer0[n] = _inbuff0[disp+n];
+            buffer1[n] = _inbuff1[disp+n];
+            buffer2[n] = _inbuff2[disp+n];
+            buffer3[n] = _inbuff3[disp+n];
+            buffer4[n] = _inbuff4[disp+n];
         }
         for (int n = 0; n < 64; n++) {
         #pragma HLS unroll
@@ -172,7 +180,7 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
                             + 0.5 * fSqrt3 * pow(m_fSinBeta,2.0) * temp2[n];
         }
         for (int n = 0; n < 64; n++) {
-        #pragma HLS unroll 
+        #pragma HLS unroll
             _outbuff[disp+n] = - t4[n] * m_fSin2Gamma
                                + t0[n] * m_fCos2Gamma;
             _outbuff[1024+disp+n] = - t3[n] * m_fSinGamma
@@ -188,8 +196,8 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
 /*
     compute_label2:for (int niSample = 0; niSample < nSamples; niSample++) {
         #pragma HLS unroll factor=2
-        int s = niSample%2 == 0 ? 0 : 5; 
-        // Alpha rotation 
+        int s = niSample%2 == 0 ? 0 : 5;
+        // Alpha rotation
         m_pfTempSample[0+s] = - _inbuff[kU*nSamples+niSample] * m_fSin2Alpha
                             + _inbuff[kV*nSamples+niSample] * m_fCos2Alpha;
         m_pfTempSample[1+s] = - _inbuff[kS*nSamples+niSample] * m_fSinAlpha
@@ -241,46 +249,44 @@ void compute(word_t _inbuff[SIZE_IN_CHUNK_DATA],
 
 void top(dma_word_t *out, dma_word_t *in1,
          /* <<--params-->> */
-	 const unsigned conf_info_nBatches,
-	 const unsigned conf_info_channels,
-	 const unsigned conf_info_nSamples,
-	 dma_info_t &load_ctrl, dma_info_t &store_ctrl)
+     const unsigned conf_info_nBatches,
+     const unsigned conf_info_channels,
+     const unsigned conf_info_nSamples,
+     dma_info_t &load_ctrl, dma_info_t &store_ctrl)
 {
 
     /* <<--local-params-->> */
-	 const unsigned nBatches = conf_info_nBatches;
-	 const unsigned channels = conf_info_channels;
-	 const unsigned nSamples = conf_info_nSamples;
+     const unsigned nBatches = conf_info_nBatches;
+     const unsigned channels = conf_info_channels;
+     const unsigned nSamples = conf_info_nSamples;
 
     // Batching
 batching:
-    for (unsigned b = 0; b < nBatches; b++)
+    for (unsigned b = 0; b < 1; b++)
     {
         // Chunking
     go:
-        for (int c = 0; c < 1; c++)
+        for (int c = 0; c < nBatches; c++)
         {
-            word_t _inbuff[SIZE_IN_CHUNK_DATA];
+            // word_t _inbuff[SIZE_IN_CHUNK_DATA];
             word_t _outbuff[SIZE_OUT_CHUNK_DATA];
 
-            load(_inbuff, in1,
-                 /* <<--args-->> */
-	 	 nBatches,
-	 	 channels,
-	 	 nSamples,
-                 load_ctrl, c, b);
-            compute(_inbuff,
-                    /* <<--args-->> */
-	 	 nBatches,
-	 	 channels,
-	 	 nSamples,
-                    _outbuff);
-            store(_outbuff, out,
-                  /* <<--args-->> */
-	 	 nBatches,
-	 	 channels,
-	 	 nSamples,
-                  store_ctrl, c, b);
+            word_t _inbuff0[1024];
+            word_t _inbuff1[1024];
+            word_t _inbuff2[1024];
+            word_t _inbuff3[1024];
+            word_t _inbuff4[1024];
+
+            word_t _outbuff0[1024];
+            word_t _outbuff1[1024];
+            word_t _outbuff2[1024];
+            word_t _outbuff3[1024];
+            word_t _outbuff4[1024];
+
+            #pragma HLS dataflow
+            load(_inbuff0, _inbuff1, _inbuff2, _inbuff3, _inbuff4, in1, nBatches, channels, nSamples, load_ctrl, c, b);
+            compute(_inbuff0, _inbuff1, _inbuff2, _inbuff3, _inbuff4, nBatches, channels, nSamples, _outbuff);
+            store(_outbuff, out, nBatches, channels, nSamples, store_ctrl, c, b);
         }
     }
 }

@@ -84,8 +84,10 @@ static int validate_buf(token_t *out, token_t *gold)
 
 	for (i = 0; i < nBatches; i++)
 		for (j = 0; j < channels * nSamples; j++)
-			if (my_abs(gold[i * out_words_adj + j] - out[i * out_words_adj + j]) > 0.00001)
+			if (my_abs(gold[i * out_words_adj + j] - out[i * out_words_adj + j]) > 0.00001){
 				errors++;
+				printf("gold: %lu, out: %lu\n", gold[i * out_words_adj + j], out[i * out_words_adj + j]);
+			}
 
     printf("errors in baremetal: %d\n", errors); 
 	return errors;
@@ -276,7 +278,7 @@ int main(int argc, char * argv[])
 #else
 		{
 			/* TODO: Restore full test once ESP caches are integrated */
-			coherence = ACC_COH_RECALL;
+			coherence = ACC_COH_NONE;
 #endif
             // enum accelerator_coherence {ACC_COH_NONE = 0, ACC_COH_LLC, ACC_COH_RECALL, ACC_COH_FULL, ACC_COH_AUTO};
 			printf("  --------------------\n");
@@ -310,7 +312,10 @@ int main(int argc, char * argv[])
             start_cnt = get_counter(); 
 			// Flush (customize coherence model here)
 			esp_flush(coherence);
+            end_cnt = get_counter(); 
+        	printf("acc flush counter: %lu\n", end_cnt-start_cnt);
 
+			start_cnt = get_counter(); 
 			// Start accelerators
 			// printf("  Start...\n");
             // start_cnt = get_counter();

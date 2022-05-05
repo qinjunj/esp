@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 	for(unsigned k = 0; k < VALUES_PER_WORD; k++)
 	    outbuff[i * VALUES_PER_WORD + k] = mem[out_offset + i].word[k];
 
-    std::ofstream outputs("/scratch/projects/qinjunj2/esp/accelerators/vivado_hls/rotateorder2_vivado/hw/tb/outputs.txt");
+    std::ofstream outputs("/scratch/projects/yaoy4/esp2/esp/accelerators/vivado_hls/rotateorder2_vivado/hw/tb/outputs.txt");
     for(int i = 0; i < channels; i++) {
       for (int j = 0 ; j < nSamples; j++) {
         outputs << outbuff[nSamples*i+j] << " ";
@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
     int errors = 0;
     for(unsigned i = 0; i < nBatches; i++)
         for(unsigned j = 0; j < channels * nSamples; j++)
-	    if (std::abs(outbuff[i * out_words_adj + j] - outbuff_gold[i * out_words_adj + j]) > 0.00001)
-		errors++;
+            if (std::abs(outbuff[i * out_words_adj + j] - outbuff_gold[i * out_words_adj + j]) > 0.00001)
+            errors++;
 
     if (errors)
 	std::cout << "Test FAILED with " << errors << " errors." << std::endl;
