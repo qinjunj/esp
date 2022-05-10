@@ -125,8 +125,11 @@ int main(int argc, char **argv) {
     int errors = 0;
     for(unsigned i = 0; i < nBatches; i++)
         for(unsigned j = 0; j < nChannels*nSamples; j++)
-		if (std::abs(outbuff[i * out_words_adj + j] - outbuff_gold[i * out_words_adj + j]) > 0.00001)
-		        errors++;
+		if (std::abs(outbuff[i * out_words_adj + j] - outbuff_gold[i * out_words_adj + j]) > 0.00001) {
+            std::cout << "GOT: " << outbuff[i * out_words_adj + j] << " EXPECTED: " << outbuff_gold[i * out_words_adj + j] << std::endl;
+            errors++;
+        }
+		        
 
     if (errors)
 	std::cout << "Test FAILED with " << errors << " errors." << std::endl;

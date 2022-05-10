@@ -10,13 +10,13 @@ set word_widths {32}
 # set dataype "fl32" if both input and output are float
 # set dataype "fl32in" if only the input is float
 # set dataype "fl32out" if only the output is float
-set datatype ""
+set datatype "fl32"
 
 # Clock period
 
 if {[lsearch $fpga_techs $TECH] >= 0} {
     if {$TECH eq "virtex7"} {
-	set clock_period 10
+	set clock_period 12.5
     }
     if {$TECH eq "zynq7000"} {
 	set clock_period 10

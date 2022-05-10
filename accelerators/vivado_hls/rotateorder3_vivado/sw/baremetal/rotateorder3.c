@@ -9,6 +9,7 @@
 #include <esp_accelerator.h>
 #include <esp_probe.h>
 #include <fixed_point.h>
+#include <math.h>
 
 typedef int32_t token_t;
 
@@ -16,6 +17,33 @@ static unsigned DMA_WORD_PER_BEAT(unsigned _st)
 {
         return (sizeof(void *) / _st);
 }
+
+
+static inline uint64_t get_counter()
+{
+	uint64_t counter;
+	asm volatile (
+		"li t0, 0;"
+		// "rdcycle t0;"
+		"csrr t0, mcycle;"
+		"mv %0, t0"
+		: "=r" ( counter )
+		:
+		: "t0"
+	);
+
+	// printf("counter: %x\n", counter);
+
+	return counter;
+}
+
+static float my_abs(float a){
+	if(a > 0)
+		return a;
+	else
+		return -a;
+}
+
 
 
 #define SLD_ROTATEORDER3 0x060
@@ -52,6 +80,9 @@ static unsigned in_size;
 static unsigned out_size;
 static unsigned out_offset;
 static unsigned mem_size;
+
+uint64_t start_cnt_pc;
+uint64_t end_cnt_pc;
 
 /* Size of the contiguous chunks for scatter/gather */
 #define CHUNK_SHIFT 20
@@ -105,13 +136,91 @@ static void init_buf (token_t *in, token_t * gold)
 	int i;
 	int j;
 
-	for (i = 0; i < nBatches; i++)
-		for (j = 0; j < nChannels*nSamples; j++)
-			in[i * in_words_adj + j] = (token_t) j;
+	for (i = 0; i < nChannels; i++) {
+        for (j = 0; j < nSamples; j++) {
+            in[nSamples*i+j] = (token_t) (-1.0 + j/(float)(nSamples/2)); // random between -1 and 1 to mimic sin cos
+        }
+    }
 
-	for (i = 0; i < nBatches; i++)
-		for (j = 0; j < nChannels*nSamples; j++)
-			gold[i * out_words_adj + j] = (token_t) j;
+	const unsigned kQ = 0, kO = 1, kM = 2, kK = 3, kL = 4, kN = 5, kP = 6;
+	const float fSqrt3_2 = sqrt(3.f/2.f);
+    const float fSqrt15 = sqrt(15.f);
+    const float fSqrt5_2 = sqrt(5.f/2.f);
+
+	float tmp[nChannels];
+	float tmp2[nChannels];
+
+	start_cnt_pc = get_counter(); 
+	for (int niSample = 0; niSample < nSamples; niSample++) {
+		// Alpha rotation
+		tmp[kQ] = - in[niSample+nSamples*kP] * sinA3
+							+ in[niSample+nSamples*kQ] * cosA3;
+		tmp[kO] = - in[niSample+nSamples*kN] * sinA2
+							+ in[niSample+nSamples*kO] * cosA2;
+		tmp[kM] = - in[niSample+nSamples*kL] * sinA1
+							+ in[niSample+nSamples*kM] * cosA1;
+		tmp[kK] = in[niSample+nSamples*kK];
+		tmp[kL] = in[niSample+nSamples*kL] * cosA1
+							+ in[niSample+nSamples*kM] * sinA1;
+		tmp[kN] = in[niSample+nSamples*kN] * cosA2
+							+ in[niSample+nSamples*kO] * sinA2;
+		tmp[kP] = in[niSample+nSamples*kP] * cosA3
+							+ in[niSample+nSamples*kQ] * sinA3;
+
+		// Beta rotation
+		tmp2[kQ] = 0.125f * tmp[kQ] * (5.f + 3.f*cosB2)
+					- fSqrt3_2 * tmp[kO] *cosB1 * sinB1
+					+ 0.25f * fSqrt15 * tmp[kM] * pow(sinB1,2.0f);
+		tmp2[kO] = tmp[kO] * cosB2
+					- fSqrt5_2 * tmp[kM] * cosB1 * sinB1
+					+ fSqrt3_2 * tmp[kQ] * cosB1 * sinB1;
+		tmp2[kM] = 0.125f * tmp[kM] * (3.f + 5.f*cosB2)
+					- fSqrt5_2 * tmp[kO] *cosB1 * sinB1
+					+ 0.25f * fSqrt15 * tmp[kQ] * pow(sinB1,2.0f);
+		tmp2[kK] = 0.25f * tmp[kK] * cosB1* (-1.f + 15.f*cosB2)
+					+ 0.5f * fSqrt15 * tmp[kN] * cosB1 * pow(sinB1,2.f)
+					+ 0.5f * fSqrt5_2 * tmp[kP] * pow(sinB1,3.f)
+					+ 0.125f * fSqrt3_2 * tmp[kL] * (sinB1 + 5.f * sinB3);
+		tmp2[kL] = 0.0625f * tmp[kL] * (cosB1 + 15.f * cosB3)
+					+ 0.25f * fSqrt5_2 * tmp[kN] * (1.f + 3.f * cosB2) * sinB1
+					+ 0.25f * fSqrt15 * tmp[kP] * cosB1 * pow(sinB1,2.f)
+					- 0.125 * fSqrt3_2 * tmp[kK] * (sinB1 + 5.f * sinB3);
+		tmp2[kN] = 0.125f * tmp[kN] * (5.f * cosB1 + 3.f * cosB3)
+					+ 0.25f * fSqrt3_2 * tmp[kP] * (3.f + cosB2) * sinB1
+					+ 0.5f * fSqrt15 * tmp[kK] * cosB1 * pow(sinB1,2.f)
+					+ 0.125 * fSqrt5_2 * tmp[kL] * (sinB1 - 3.f * sinB3);
+		tmp2[kP] = 0.0625f * tmp[kP] * (15.f * cosB1 + cosB3)
+					- 0.25f * fSqrt3_2 * tmp[kN] * (3.f + cosB2) * sinB1
+					+ 0.25f * fSqrt15 * tmp[kL] * cosB1 * pow(sinB1,2.f)
+					- 0.5 * fSqrt5_2 * tmp[kK] * pow(sinB1,3.f);
+
+		// Gamma rotation
+		gold[kQ * nSamples + niSample] = - tmp2[kP] * sinG3
+							+ tmp2[kQ] * cosG3;
+		gold[kO* nSamples + niSample] = - tmp2[kN] * sinG2
+							+ tmp2[kO] * cosG2;
+		gold[kM* nSamples + niSample] = - tmp2[kL] * sinG1
+							+ tmp2[kM] * cosG1;
+		gold[kK* nSamples + niSample] = tmp2[kK];
+		gold[kL* nSamples + niSample] = tmp2[kL] * cosG1
+							+ tmp2[kM] * sinG1;
+		gold[kN* nSamples + niSample] = tmp2[kN] * cosG2
+							+ tmp2[kO] * sinG2;
+		gold[kP* nSamples + niSample] = tmp2[kP] * cosG3
+							+ tmp2[kQ] * sinG3;
+
+    }
+	
+
+	// for (i = 0; i < nBatches; i++)
+	// 	for (j = 0; j < nChannels*nSamples; j++)
+	// 		in[i * in_words_adj + j] = (token_t) j;
+
+	// for (i = 0; i < nBatches; i++)
+	// 	for (j = 0; j < nChannels*nSamples; j++)
+	// 		gold[i * out_words_adj + j] = (token_t) j;
+	
+	end_cnt_pc = get_counter(); 
 }
 
 
@@ -129,6 +238,10 @@ int main(int argc, char * argv[])
 	unsigned errors = 0;
 	unsigned coherence;
 
+	uint64_t start_cnt;
+	uint64_t coh_cnt;
+	uint64_t end_cnt;
+
 	if (DMA_WORD_PER_BEAT(sizeof(token_t)) == 0) {
 		in_words_adj = nChannels*nSamples;
 		out_words_adj = nChannels*nSamples;
@@ -140,7 +253,7 @@ int main(int argc, char * argv[])
 	out_len = out_words_adj * (nBatches);
 	in_size = in_len * sizeof(token_t);
 	out_size = out_len * sizeof(token_t);
-	out_offset  = 0;
+	out_offset  = in_len;
 	mem_size = (out_offset * sizeof(token_t)) + out_size;
 
 
@@ -188,10 +301,10 @@ int main(int argc, char * argv[])
 #else
 		{
 			/* TODO: Restore full test once ESP caches are integrated */
-			coherence = ACC_COH_NONE;
+			coherence = ACC_COH_NONE; // {ACC_COH_NONE = 0, ACC_COH_LLC, ACC_COH_RECALL, ACC_COH_FULL};
 #endif
-			printf("  --------------------\n");
-			printf("  Generate input...\n");
+			//printf("  --------------------\n");
+			//printf("  Generate input...\n");
 			init_buf(mem, gold);
 
 			// Pass common configuration parameters
@@ -235,11 +348,15 @@ int main(int argc, char * argv[])
 		iowrite32(dev, ROTATEORDER3_COSB2_REG, cosB2);
 		iowrite32(dev, ROTATEORDER3_COSB3_REG, cosB3);
 
+			start_cnt = get_counter(); 
+
 			// Flush (customize coherence model here)
 			esp_flush(coherence);
 
+			coh_cnt = get_counter(); 
+
 			// Start accelerators
-			printf("  Start...\n");
+			//printf("  Start...\n");
 			iowrite32(dev, CMD_REG, CMD_MASK_START);
 
 			// Wait for completion
@@ -250,8 +367,10 @@ int main(int argc, char * argv[])
 			}
 			iowrite32(dev, CMD_REG, 0x0);
 
-			printf("  Done\n");
-			printf("  validating...\n");
+			end_cnt = get_counter(); 
+
+			//printf("  Done\n");
+			//printf("  validating...\n");
 
 			/* Validation */
 			errors = validate_buf(&mem[out_offset], gold);
@@ -260,6 +379,11 @@ int main(int argc, char * argv[])
 			else
 				printf("  ... PASS\n");
 		}
+
+		printf("acc counter flush: %lu\n", coh_cnt-start_cnt);
+		printf("acc counter: %lu\n", end_cnt-coh_cnt);
+		printf("cpu  counter: %lu\n", end_cnt_pc-start_cnt_pc);
+
 		aligned_free(ptable);
 		aligned_free(mem);
 		aligned_free(gold);
